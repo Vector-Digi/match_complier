@@ -1,0 +1,85 @@
+name: Build Test
+
+on:
+  push:
+    branches:
+      - "**"
+    tags-ignore:
+      - "*"
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      SDK_URL_PATH: https://downloads.openwrt.org/snapshots/targets/x86/64
+      SDK_NAME: -sdk-x86-64_
+      ARCH: x86_64
+      CACHE_DIR: ~/cache
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Setup Cache
+        uses: actions/cache@v2
+        with:
+          path: ${{ env.CACHE_DIR }}
+          key: ${{ runner.os }}:openwrt-v2ray:${{ env.ARCH }}:cache:${{ github.run_number }}
+          restore-keys: |
+            ${{ runner.os }}:openwrt-v2ray:${{ env.ARCH }}:cache:
+
+      - name: Setup CCache
+        uses: actions/cache@v2
+        with:
+          path: ~/.ccache
+          key: ${{ runner.os }}:openwrt-v2ray:${{ env.ARCH }}:ccache:${{ github.run_number }}
+          restore-keys: |
+            ${{ runner.os }}:openwrt-v2ray:${{ env.ARCH }}:ccache:
+
+      - name: Install Dependencies
+        run: |
+          sudo apt-get install -yq ccache gettext libncurses5-dev xsltproc
+          sudo update-ccache-symlinks
+          echo "/usr/lib/ccache" >> $GITHUB_PATH
+          echo "CONFIG_CCACHE=y" >> $GITHUB_ENV
+
+      - name: Prepare SDK Home
+        run: |
+          echo "SDK_HOME=$(mktemp -d)" >> $GITHUB_ENV
+
+      - name: Build package
+        env:
+          OPENWRT_GOLANG_COMMIT: ${{ secrets.OPENWRT_GOLANG_COMMIT }}
+        run: sh openwrt_compile.sh
+
+      - name: Show CCache Status
+        run: ccache -s
+
+      - name: Save Build Result
+        uses: actions/upload-artifact@v2
+        with:
+          name: v2ray-core
+          path: |
+            *.ipk
+          retention-days: 7
+
+  notify:
+    name: Notify Build Pass
+    runs-on: ubuntu-latest
+    env:
+      TRIGGER_URL: ${{ secrets.TRIGGER_URL }}
+      TRIGGER_TOKEN: ${{ secrets.TRIGGER_TOKEN }}
+    needs: build
+    steps:
+      - name: Notify Jenkins
+        run: |
+          if [ -z "$TRIGGER_URL" ] ; then
+            echo "::warning::No trigger url found, skip..."
+            exit 0
+          fi
+
+          curl -X POST \
+              -H "Content-Type: application/json; charset=utf-8" \
+              -H "Authorization: Bearer $TRIGGER_TOKEN" \
+              -d "{\"event\":\"build\",\"repository\":\"${{ github.repository }}\",\"ref\":\"${{ github.ref }}\"}" \
+              "$TRIGGER_URL" || true
