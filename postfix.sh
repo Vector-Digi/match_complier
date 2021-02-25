@@ -29,7 +29,7 @@ sed -i 's*root::0:0:99999:7:::*root:\$1\$Z5PSAHJ9$1UReP9Mm94CqDFVEnROB//:17713:0
 git clone -b packages https://github.com/Vector-Digi/match_complier.git package/custom
 
 # Add Fullcone-NAT option
-sed -i '/Netfilter flow offload support/i\o = s.option(form.Flag, '"'"'fullcone'"'"', _('"'"'Enable FullCone-NAT'"'"'));'  feeds/luci/applications/luci-app-firewall/htdocs/luci-static/resources/view/firewall/zones.js && sed -i '/Uncomment this line to disable ipv6 rules/i\option fullcone		0' package/network/config/firewall/files/firewall.config && wget -P package/network/config/firewall/patches/ https://github.com/Lienol/openwrt/raw/main/package/network/config/firewall/patches/fullconenat.patch &&wget -P target/linux/generic/hack-5.4/  https://github.com/Lienol/openwrt/raw/main/target/linux/generic/hack-5.4/952-net-conntrack-events-support-multiple-registrant.patch
+sed -i '/Netfilter flow offload support/i\o = s.option(form.Flag, '"'"'fullcone'"'"', _('"'"'Enable FullCone-NAT'"'"'));'  feeds/luci/applications/luci-app-firewall/htdocs/luci-static/resources/view/firewall/zones.js && sed -i '/Uncomment this line to disable ipv6 rules/i\option fullcone		0' package/network/config/firewall/files/firewall.config && mkdir package/network/config/firewall/patches/ && wget -P package/network/config/firewall/patches/ https://github.com/Lienol/openwrt/raw/main/package/network/config/firewall/patches/fullconenat.patch &&wget -P target/linux/generic/hack-5.4/  https://github.com/Lienol/openwrt/raw/main/target/linux/generic/hack-5.4/952-net-conntrack-events-support-multiple-registrant.patch
 
 # Enable MIPS FPU emulator
 if grep -q 'CONFIG_TARGET_ramips=y' .config  &&  ! grep -q 'CONFIG_KERNEL_MIPS_FP_SUPPORT=y' .config ;
